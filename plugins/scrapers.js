@@ -315,49 +315,36 @@ Module({
     fromMe: w,
     desc: "Latest news",
     use: 'utility'
-}, async (message, match) => {
-    if (!match[1]) return await message.sendReply("_Need category!_\n_.news *kerala|india|world*_")
-    if (match[1].toLowerCase() === "kerala"){
-        var buttons = [
-            {buttonId: 'nws_mt '+message.myjid, buttonText: {displayText: 'Mathrubhumi'}, type: 1},
-            {buttonId: '24n '+message.myjid, buttonText: {displayText: 'TwentyFour'}, type: 1},
-            {buttonId: 'nws_ma '+message.myjid, buttonText: {displayText: 'Manorama'}, type: 1}
-        ];
-        return await sendButton(buttons,"*Select a news provider!*","_News provided by un-official REST APIs_",message);
-    }
-if (match[1].toLowerCase() === "india") {
-    var news = [];
-    var res = (await axios("https://ndtvnews-api.herokuapp.com/general?category=india")).data
-    var sk = res.news[0].articles.slice(0,30)
-	for (var i in sk) {
-    news.push({title: sk[i].headline,rowId:"ind_news:"+i});
-    }
-    const sections = [{title: "Click and send to get detailed news!",rows: news}];
-    const listMessage = {
-        footer: "_📰 Latest Indian news from NDTV_",
-        text:"*News Headlines 🗞️*",
-        title: res.news[0].articles[0].headline,
-        buttonText: "More articles 🔍",
-        sections
-    }
-    return await message.client.sendMessage(message.jid, listMessage,{quoted: message.data})
+}, const axios = require("axios");
+
+let storedLink = null;  
+
+const API_ENDPOINT = "https://ube_news_ganna_api_eka"; 
+
+async function sendNews(title, desc, date) {
+    const message = `*${title}*\n\n${desc}\n\n${date}`;
+    await conn.sendMessage( jid , { text: message });  
 }
-if (match[1].toLowerCase() === "world") {
-    var news = [];
-    var res = (await axios("https://ndtvnews-api.herokuapp.com/general?category=world")).data
-    var sk = res.news[0].articles.slice(0,30)
-	for (var i in sk) {
-    news.push({title: sk[i].headline,rowId:"wrld_news:"+i});
+ 
+async function checkForNewsUpdates() {
+    try {
+        const response = await axios.get(API_ENDPOINT);
+        const { link, title, desc, date } = response.data;
+
+        if (storedLink !== link) {  
+            await sendNews(title, desc, date);
+            
+            storedLink = link;
+        } 
+    } catch (error) {
+        console.error("Error fetching API data:", error.message);
     }
-    const sections = [{title: "Click and send to get detailed news!",rows: news}];
-    const listMessage = {
-        footer: "_📰 Latest International news from NDTV_",
-        text:"*News Headlines 🗞️*",
-        title: res.news[0].articles[0].headline,
-        buttonText: "More articles 🔍",
-        sections
-    }
-    return await message.client.sendMessage(message.jid, listMessage,{quoted: message.data})
+
+    // Re-run the function after a 5-minute delay
+    setTimeout(checkForNewsUpdates, 5 * 60 * 1000); // 5 minutes in milliseconds
+}
+ 
+checkForNewsUpdates();
 }
     
 });
